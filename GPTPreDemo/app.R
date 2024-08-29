@@ -335,7 +335,7 @@ ui <- dashboardPage(
                  label = "TREND", 
                  icon = icon("chart-bar"), 
                  style = "success"),
-        bsButton("diagnostics", 
+        bsButton("about", 
                  label = "ABOUT", 
                  icon = icon("flask", class = "flask-box"), 
                  style = "success"),
@@ -392,7 +392,7 @@ server <- function(input, output, session) {
   
   update_all <- function(x) {
     updateSelectInput(session, "tab",
-                      choices = c("", "Maps", "Trends", "Diagnostics", "Outcome"),
+                      choices = c("", "Maps", "Trends", "About", "Outcome"),
                       label = "",
                       selected = x
     )
@@ -407,7 +407,7 @@ server <- function(input, output, session) {
     update_all("Trends")
   })
   observeEvent(input$diagnostics, {
-    update_all("Diagnostics")
+    update_all("About")
   })
   observeEvent(input$outcome, {
     update_all("Outcome")
@@ -454,7 +454,7 @@ server <- function(input, output, session) {
   observeEvent("", {
     show("map_panel")
     hide("trend_panel")
-    hide("diagnostics_panel")
+    hide("about_panel")
     hide("outcome_panel")
   }, once = TRUE)
   
@@ -462,24 +462,24 @@ server <- function(input, output, session) {
   observeEvent(input$map, {
     show("map_panel")
     hide("trend_panel")
-    hide("diagnostics_panel")
+    hide("about_panel")
     hide("outcome_panel")
   })
   observeEvent(input$trend, {
     show("trend_panel")
-    hide("diagnostics_panel")
+    hide("about_panel")
     hide("outcome_panel")
     hide("map_panel")
   })
-  observeEvent(input$diagnostics, {
-    show("diagnostics_panel")
+  observeEvent(input$about, {
+    show("about_panel")
     hide("trend_panel")
     hide("outcome_panel")
     hide("map_panel")
   })
   observeEvent(input$outcome, {
     show("outcome_panel")
-    hide("diagnostics_panel")
+    hide("about_panel")
     hide("trend_panel")
     hide("map_panel")
   })
@@ -503,8 +503,8 @@ server <- function(input, output, session) {
         paste("success")
       }
     })
-    updateButton(session, "diagnostics", style = {
-      if (x == "Diagnostics") {
+    updateButton(session, "about", style = {
+      if (x == "About") {
         paste("warning")
       } else {
         paste("success")
