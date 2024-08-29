@@ -1,0 +1,13 @@
+name: GPTPreDemo
+title: GPTPreDemo
+username: pregptdiction
+account: pregptdiction
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12511500
+bundleId: 9031918
+url: https://pregptdiction.shinyapps.io/GPTPreDemo/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app copy.R

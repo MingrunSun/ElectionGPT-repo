@@ -82,7 +82,7 @@ melted_data<-melted_data%>%
 left_join(electoral_votes, by ="state")
 
 # Print the total electoral votes
-print(paste("Total Electoral Votes:", total_electoral_votes))
+# Check tab
 
 #View(melted_data)
 head(melted_data)
