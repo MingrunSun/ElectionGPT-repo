@@ -66,6 +66,22 @@ melted_data<-data%>%
   mutate(party = ifelse(value ==1, "Republican", "Democratic"))
 
 
+#electoral_votes
+electoral_votes <- data.frame(
+  state = c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", 
+            "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", 
+            "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", 
+            "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", 
+            "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC"),
+  Electoral_Votes = c(9, 3, 11, 6, 54, 10, 7, 3, 30, 16, 
+                      4, 4, 19, 11, 6, 6, 8, 8, 4, 10, 
+                      11, 15, 10, 6, 10, 4, 5, 6, 4, 14, 
+                      5, 28, 16, 3, 17, 7, 8, 19, 4, 9, 
+                      3, 11, 40, 6, 3, 13, 12, 4, 10, 3, 3))
+
+#melted_data<-melted_data%>%
+  #left_join(electoral_votes, by ="state")
+
 
 subdata1 <- melted_data %>%
   mutate(StateFull = state.name[match(state, state.abb)]) %>%
