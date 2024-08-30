@@ -53,7 +53,7 @@ library(viridis)
 library(zoo)
 
 
-data<-read_csv("/Users/sunmingrun/Documents/GitHub/ElectionGPT-repo/GPTPreDemo/panel_election_results.csv",show_col_types = FALSE)
+data<-read_csv("panel_election_results.csv",show_col_types = FALSE)
 
 
 
@@ -65,6 +65,22 @@ melted_data<-data%>%
   )%>%
   mutate(party = ifelse(value ==1, "Republican", "Democratic"))
 
+
+#electoral_votes
+electoral_votes <- data.frame(
+  state = c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", 
+            "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", 
+            "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", 
+            "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", 
+            "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC"),
+  Electoral_Votes = c(9, 3, 11, 6, 54, 10, 7, 3, 30, 16, 
+                      4, 4, 19, 11, 6, 6, 8, 8, 4, 10, 
+                      11, 15, 10, 6, 10, 4, 5, 6, 4, 14, 
+                      5, 28, 16, 3, 17, 7, 8, 19, 4, 9, 
+                      3, 11, 40, 6, 3, 13, 12, 4, 10, 3, 3))
+
+#melted_data<-melted_data%>%
+  #left_join(electoral_votes, by ="state")
 
 
 subdata1 <- melted_data %>%
@@ -211,7 +227,7 @@ ui <- dashboardPage(
   skin = "red",
   title = "Presidential Election",
   
-  dashboardHeader(title = "2024 Election"),
+  dashboardHeader(title = "Election GPT"),
   dashboardSidebar(
     width = 300,
     div(class = "inlay", style = "height:15px;width:100%;background-color: #ecf0f5;"),
@@ -335,9 +351,9 @@ ui <- dashboardPage(
                  label = "TREND", 
                  icon = icon("chart-bar"), 
                  style = "success"),
-        bsButton("diagnostics", 
-                 label = "DIAGNOSTICS", 
-                 icon = icon("flask", class = "flask-box"), 
+        bsButton("about", 
+                 label = "ABOUT", 
+                 icon = icon("spinner", class = "spinner-box"), 
                  style = "success"),
         bsButton("outcome", 
                  label = "OUTCOME", 
@@ -382,17 +398,64 @@ ui <- dashboardPage(
             uiOutput("box_pat6")
           ),
         )
+      ),
+      
+      fluidRow(
+        div(
+          id="about_panel",
+          column(
+            width=6,
+            style = "padding-left: 50px;", 
+            h4(p("About the Project")),
+            h5(p("The project began as an attempt to combine our interest in artificial intelligence, focusing on its predictive power and potential to shape the future.")),
+            h5(p("Step 1: Pull 100 news stories from Event Registry: API Search for news stories related to the prompt: “2024 US presidential election”."),
+               p("Step 2: Feed stories to Chat-GPT in 4 distinct voices：Four characters, each representing different perspectives, will generate 100 stories:"),
+               h6(p("• Voice 1: Anonymous/Direct truthful reporter"),
+                  p("• Voice 2: Fox Reporter Bret Baier"),
+                  p("• Voice 3: MSNBC Reporter Rachel Maddow"),
+                  p("• Voice 4: BBC Reporter Laura Kuenssberg"),
+               ),
+               p("Step 3: Generate election stories from each character’s perspective:For each character, 100 stories are written about the election outcome in each state."),
+               p("Step 4: Extract the election winners from each story: Use GPT to extract only the name of the winners from the stories for each character."),
+               p("Step 5: Save winners and display percentage of daily trials that went to each party in each state: 1 = Trump/Republican and 0 = Harris/Democrat"),
+               p("Step 6: Repeat the process daily, appending new results to the previous day’s data panel.")
+            ),
+            br(),
+            h5(p("We hope you find it interesting and/or useful.  Any comments or questions are welcome at email address"),
+               p("The source for this project is available ", a("on github", href = "https://github.com/"), ".")),
+            #hr(),
+            
+          ),
+          column(6,
+                 #br(),
+                 # HTML('<img src="GregPicCrop.png", height="110px"
+                 # style="float:right"/>','<p style="color:black"></p>'),
+                 h4(p("About the Author")),
+                 h5(p("Scott Cunningham is the Ben H. Williams Professor of Economics at Baylor University.  He specializes in a range of topics in applied microeconomics, such as mental illness, drug policy and sex work."),
+                    p("Jared Black"),
+                    p("Coco Mingrun Sun")
+                 )
+          ),
+          fluidRow(
+            column(12,
+                   div(style="text-align: center;",
+                       imageOutput("home_img", width = "50%", height = "auto")
+                   )
+            )
+          )
+        )
       )
     )
   )
-)
+)     
+      
 
 server <- function(input, output, session) {
   
   
   update_all <- function(x) {
     updateSelectInput(session, "tab",
-                      choices = c("", "Maps", "Trends", "Diagnostics", "Outcome"),
+                      choices = c("", "Maps", "Trends", "About", "Outcome"),
                       label = "",
                       selected = x
     )
@@ -407,7 +470,7 @@ server <- function(input, output, session) {
     update_all("Trends")
   })
   observeEvent(input$diagnostics, {
-    update_all("Diagnostics")
+    update_all("About")
   })
   observeEvent(input$outcome, {
     update_all("Outcome")
@@ -454,7 +517,7 @@ server <- function(input, output, session) {
   observeEvent("", {
     show("map_panel")
     hide("trend_panel")
-    hide("diagnostics_panel")
+    hide("about_panel")
     hide("outcome_panel")
   }, once = TRUE)
   
@@ -462,24 +525,24 @@ server <- function(input, output, session) {
   observeEvent(input$map, {
     show("map_panel")
     hide("trend_panel")
-    hide("diagnostics_panel")
+    hide("about_panel")
     hide("outcome_panel")
   })
   observeEvent(input$trend, {
     show("trend_panel")
-    hide("diagnostics_panel")
+    hide("about_panel")
     hide("outcome_panel")
     hide("map_panel")
   })
-  observeEvent(input$diagnostics, {
-    show("diagnostics_panel")
+  observeEvent(input$about, {
+    show("about_panel")
     hide("trend_panel")
     hide("outcome_panel")
     hide("map_panel")
   })
   observeEvent(input$outcome, {
     show("outcome_panel")
-    hide("diagnostics_panel")
+    hide("about_panel")
     hide("trend_panel")
     hide("map_panel")
   })
@@ -503,8 +566,8 @@ server <- function(input, output, session) {
         paste("success")
       }
     })
-    updateButton(session, "diagnostics", style = {
-      if (x == "Diagnostics") {
+    updateButton(session, "about", style = {
+      if (x == "About") {
         paste("warning")
       } else {
         paste("success")
