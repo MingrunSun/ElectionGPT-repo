@@ -53,7 +53,7 @@ library(viridis)
 library(zoo)
 
 
-data<-read_csv("panel_election_results.csv",show_col_types = FALSE)
+data<-read_csv("panel_election_results_state.csv",show_col_types = FALSE)
 
 
 
@@ -63,8 +63,8 @@ melted_data<-data%>%
     state = State,
     Type= Voice# Renaming 'State' to 'state'
   )%>%
-  mutate(party = ifelse(value ==1, "Republican", "Democratic"))
-
+  mutate(party = ifelse(value ==1, "Republican", "Democratic")) %>%
+  mutate(Type = ifelse(Type == "direct", "Direct", Type))
 
 #electoral_votes
 electoral_votes <- data.frame(
@@ -79,8 +79,9 @@ electoral_votes <- data.frame(
                       5, 28, 16, 3, 17, 7, 8, 19, 4, 9, 
                       3, 11, 40, 6, 3, 13, 12, 4, 10, 3, 3))
 
-#melted_data<-melted_data%>%
-  #left_join(electoral_votes, by ="state")
+
+melted_data<-melted_data%>%
+  left_join(electoral_votes, by ="state")
 
 
 subdata1 <- melted_data %>%
@@ -155,6 +156,29 @@ extended_data <- melted_data %>%
   mutate(Predicted_party=ifelse(Percent_byState>=0.5, "Republican", "Democratic")) 
 
 #------------Data process done
+
+
+subdata2_1 <-subdata2%>%
+  left_join(electoral_votes, by="state")%>%
+  select(Date,Type,state,Percent_byState_Demo,Electoral_Votes)%>%
+  #filter(Date=="2024-08-13")%>%
+  mutate(proj_party=ifelse(Percent_byState_Demo>=0.5, "Democratic", "Republican")) 
+
+
+subdata2_2 <-subdata2_1%>%
+  group_by(Date, proj_party,Type) %>%
+  summarize(
+    Total_votes = sum(Electoral_Votes)
+  )
+
+
+subdata2_reshape <-subdata2_2 %>%
+  select(Date, Type,proj_party, Total_votes) %>%  # Select relevant columns
+  pivot_wider(names_from = Type, values_from = Total_votes, names_prefix = "Votes_")%>% 
+  arrange(Date) 
+
+%>%
+  filter(proj_party=="Democratic")
 
 
 
@@ -1147,6 +1171,13 @@ server <- function(input, output, session) {
     })
   })
   
+  output$home_img <- renderImage({
+    
+    list(src = "Jared_Image2.png"
+         
+    )
+    
+  }, deleteFile = F)
   
 }
 

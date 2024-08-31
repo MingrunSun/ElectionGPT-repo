@@ -53,7 +53,7 @@ library(viridis)
 library(zoo)
 
 
-data<-read_csv("panel_election_results.csv",show_col_types = FALSE)
+data<-read_csv("panel_election_results_state.csv",show_col_types = FALSE)
 
 
 
@@ -63,8 +63,8 @@ melted_data<-data%>%
     state = State,
     Type= Voice# Renaming 'State' to 'state'
   )%>%
-  mutate(party = ifelse(value ==1, "Republican", "Democratic"))
-
+  mutate(party = ifelse(value ==1, "Republican", "Democratic")) %>%
+  mutate(Type = ifelse(Type == "direct", "Direct", Type))
 
 #electoral_votes
 electoral_votes <- data.frame(
@@ -153,6 +153,34 @@ extended_data <- melted_data %>%
   mutate(year = as.numeric(format(as.Date(Date), "%Y")))%>%
   mutate(abb=state)%>%
   mutate(Predicted_party=ifelse(Percent_byState>=0.5, "Republican", "Democratic")) 
+
+
+#method #1 calculate the average and assign the votes
+subdata2_1 <-subdata2%>%
+  left_join(electoral_votes, by="state")%>%
+  select(Date,Type,state,Percent_byState_Demo,Electoral_Votes)%>%
+  #filter(Date=="2024-08-13")%>%
+  mutate(proj_party=ifelse(Percent_byState_Demo>=0.5, "Democratic", "Republican")) 
+
+
+subdata2_2 <-subdata2_1%>%
+  group_by(Date, proj_party,Type) %>%
+  summarize(
+    Total_votes = sum(Electoral_Votes)
+  )
+
+
+subdata2_reshape <-subdata2_2 %>%
+  select(Date, Type,proj_party, Total_votes) %>%  # Select relevant columns
+  pivot_wider(names_from = Type, values_from = Total_votes, names_prefix = "Votes_")%>% 
+  arrange(Date) %>%
+  filter(proj_party=="Democratic")
+.groups = 'drop'
+
+subdata2_reshape <- subdata2_reshape %>%
+  ungroup() %>%  # Ungroup the data to remove any implicit grouping
+  select(Date, Votes_BBC, Votes_Direct, Votes_Fox, Votes_MSNBC)  
+
 
 #------------Data process done
 
@@ -397,11 +425,62 @@ ui <- dashboardPage(
             width = 12,
             uiOutput("box_pat6")
           ),
+          column(
+            width = 12,
+            uiOutput("box_pat7")
+        )
+      ),
+      
+      fluidRow(
+        div(
+          id="about_panel",
+          column(
+            width=6,
+            style = "padding-left: 50px;", 
+            h4(p("About the Project")),
+            h5(p("The project began as an attempt to combine our interest in artificial intelligence, focusing on its predictive power and potential to shape the future.")),
+            h5(p("Step 1: Pull 100 news stories from Event Registry: API Search for news stories related to the prompt: “2024 US presidential election”."),
+               p("Step 2: Feed stories to Chat-GPT in 4 distinct voices：Four characters, each representing different perspectives, will generate 100 stories:"),
+               h6(p("• Voice 1: Anonymous/Direct truthful reporter"),
+                  p("• Voice 2: Fox Reporter Bret Baier"),
+                  p("• Voice 3: MSNBC Reporter Rachel Maddow"),
+                  p("• Voice 4: BBC Reporter Laura Kuenssberg"),
+               ),
+               p("Step 3: Generate election stories from each character’s perspective:For each character, 100 stories are written about the election outcome in each state."),
+               p("Step 4: Extract the election winners from each story: Use GPT to extract only the name of the winners from the stories for each character."),
+               p("Step 5: Save winners and display percentage of daily trials that went to each party in each state: 1 = Trump/Republican and 0 = Harris/Democrat"),
+               p("Step 6: Repeat the process daily, appending new results to the previous day’s data panel.")
+            ),
+            br(),
+            h5(p("We hope you find it interesting and/or useful.  Any comments or questions are welcome at email address"),
+               p("The source for this project is available ", a("on github", href = "https://github.com/"), ".")),
+            #hr(),
+            
+          ),
+          column(6,
+                 #br(),
+                 # HTML('<img src="GregPicCrop.png", height="110px"
+                 # style="float:right"/>','<p style="color:black"></p>'),
+                 h4(p("About the Author")),
+                 h5(p("Scott Cunningham is the Ben H. Williams Professor of Economics at Baylor University.  He specializes in a range of topics in applied microeconomics, such as mental illness, drug policy and sex work."),
+                    p("Jared Black"),
+                    p("Coco Mingrun Sun")
+                 )
+          ),
+          fluidRow(
+            column(12,
+                   div(style="text-align: center;",
+                       imageOutput("home_img", width = "50%", height = "auto")
+                   )
+            )
+          )
         )
       )
     )
   )
+) 
 )
+
 
 server <- function(input, output, session) {
   
@@ -628,7 +707,7 @@ server <- function(input, output, session) {
   })
   
   
-  
+  # UI 6- Time Series 2
   Count_data <- reactive({
     req(input$voicechoice) 
     req(input$statesInput)
@@ -636,10 +715,19 @@ server <- function(input, output, session) {
     #req(input$partychoice)
     filter(extended_data, Type %in% input$voicechoice) %>%
       filter(StateFull %in% input$statesInput) %>%
-      filter(Date >= input$date2[1] & Date <= input$date2[2])
+      filter(Date >= input$date2[1] & Date <= input$date2[2]) %>%
+      arrange(Date)
     #%>%filter(party %in% input$partychoice)
     
   })
+  
+  # UI 7- Time Series 1
+  Votes_data_4Voice <- reactive({
+    #req(input$TimeseriesVoices) 
+    req(input$date2)
+    filter(subdata2_reshape,Date >= input$date2[1] & Date <= input$date2[2])
+  })
+  
   
   
   
@@ -861,6 +949,42 @@ server <- function(input, output, session) {
         ),
         withSpinner(
           plotlyOutput("plot_state", height = 230),
+          type = 4,
+          color = "#d33724", 
+          size = 0.7 
+        )
+      )
+    )
+  })
+  
+  # Time Trend - 3 ------------------------------------------------------------------
+  output$box_pat7 <- renderUI({
+    div(
+      style = "position: relative; backgroundColor: #ecf0f5",
+      tabBox(
+        id = "box_pat",
+        width = NULL,
+        height = 320,
+        tabPanel(
+          title = "State Projected Democrat Electoral College Victory Likelihood",
+          div(
+            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+            dropdown(
+              radioGroupButtons(
+                inputId = "box_pat7",
+                label = NULL, 
+                choices = c("Show all", "Show top 10 only"), 
+                selected = "Show all", 
+                direction = "vertical"
+              ),
+              size = "xs",
+              icon = icon("gear", class = "opt"), 
+              up = TRUE
+            )
+          )
+        ),
+        withSpinner(
+          plotlyOutput("distPlot", height = 230),
           type = 4,
           color = "#d33724", 
           size = 0.7 
@@ -1100,6 +1224,74 @@ server <- function(input, output, session) {
     })
   })
   
+  output$distPlot <- renderPlotly({
+    input$date2
+  fig <- plot_ly(Votes_data_4Voice(), x = ~Date, y = ~Votes_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
+                 line = list(color = 'rgb(205, 12, 24)', width = 4)) 
+  fig <- fig %>% add_trace(y = ~Votes_BBC, name = 'Proj BBC', line = list(color = 'rgb(22, 96, 167)', width = 4)) 
+  fig <- fig %>% add_trace(y = ~Votes_Fox, name = 'Proj Fox', line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'dash')) 
+  fig <- fig %>% add_trace(y = ~Votes_MSNBC, name = 'Proj MSNBC', line = list(color = 'rgb(22, 96, 167)', width = 4, dash = 'dot')) %>%
+    layout(
+      title = NULL,
+      xaxis = list(title = "Date",
+                   showgrid = TRUE),
+      yaxis = list(title = "Proj Democrat Win Percent", 
+                   range = c(140, 400),
+                   showgrid = FALSE),
+      shapes = list(
+        list(
+          type = "rect",
+          fillcolor = "rgba(205, 12, 24, 0.2)", # Light red fill for 140-270
+          line = list(color = "rgba(205, 12, 24, 0)"), # No border
+          x0 = min(Votes_data_4Voice()$Date), x1 = max(Votes_data_4Voice()$Date),
+          y0 = 140, y1 = 270
+        ),
+        list(
+          type = "rect",
+          fillcolor = "rgba(22, 96, 167, 0.2)", # Light blue fill for 270-400
+          line = list(color = "rgba(22, 96, 167, 0)"), # No border
+          x0 = min(Votes_data_4Voice()$Date), x1 = max(Votes_data_4Voice()$Date),
+          y0 = 270, y1 = 400
+        ),
+        list(
+          type = "line",
+          x0 = min(Votes_data_4Voice()$Date), x1 = max(Votes_data_4Voice()$Date),
+          y0 = 270, y1 = 270,
+          line = list(color = "rgb(0, 0, 0)", dash = 'dash', width = 2)
+        ),
+        list(
+          type = "line",
+          x0 = as.Date("2024-08-19"), x1 = as.Date("2024-08-19"),  # Vertical line for DNC
+          y0 = 140, y1 = 400,
+          line = list(color = "rgb(0, 0, 0)", width = 2)
+        )
+      )
+    ) %>%
+    layout(annotations = list(
+      list(
+        x = min(Votes_data_4Voice()$Date) + 5,
+        y = 350,
+        text = "Democrat Win",
+        showarrow = FALSE,
+        font = list(size = 12, weight = "bold", color = "rgb(22, 96, 167)"),
+        showgrid = FALSE
+      ),
+      list(
+        x = min(Votes_data_4Voice()$Date) + 5,
+        y = 200,
+        text = "Republican Win",
+        showarrow = FALSE,
+        font = list(size = 12, weight = "bold", color =  "rgb(205, 12, 24)")
+      ),
+      list(
+        x = as.Date("2024-08-20"),  # Position DNC label to the right of the vertical line
+        y = 160,                    # Position within the light red area
+        text = "DNC",
+        showarrow = FALSE,
+        font = list(size = 12, weight = "bold", color = "rgb(0, 0, 0)")
+      )
+    ))
+})
   
 }
 
