@@ -52,11 +52,11 @@ library(survminer)
 library(viridis)
 library(zoo)
 
+# 1 import the data
 
 data<-read_csv("panel_election_results_state.csv",show_col_types = FALSE)
 
-
-
+# 2 change the variable name and assigned the predicted party based on the result
 melted_data<-data%>%
   rename(
     value = Result,  # Renaming 'Result' to 'value'
@@ -66,7 +66,20 @@ melted_data<-data%>%
   mutate(party = ifelse(value ==1, "Republican", "Democratic")) %>%
   mutate(Type = ifelse(Type == "direct", "Direct", Type))
 
-#electoral_votes
+# 3.1 2024-8-19 data has duplicates when retry to append the data
+data_0819_msnbc <- melted_data %>%
+  filter(Type == "MSNBC", Date == "2024-08-19") %>%
+  distinct()  # This removes duplicates within the MSNBC data for August 19th
+
+# 3.2 Filter for all data that is NOT MSNBC on August 19, 2024
+data_other <- melted_data %>%
+  filter(!(Type == "MSNBC" & Date == "2024-08-19"))
+
+# 3.3 Combine the cleaned MSNBC data for August 19 with the rest of the data
+melted_data <- bind_rows(data_other, data_0819_msnbc) %>%
+  distinct(Trial, Type, Date, state, .keep_all = TRUE)
+
+# 4 Assign the electoral_votes to each state in each trial
 electoral_votes <- data.frame(
   state = c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", 
             "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", 
@@ -79,10 +92,12 @@ electoral_votes <- data.frame(
                       5, 28, 16, 3, 17, 7, 8, 19, 4, 9, 
                       3, 11, 40, 6, 3, 13, 12, 4, 10, 3, 3))
 
-#melted_data<-melted_data%>%
-  #left_join(electoral_votes, by ="state")
+# 5 merage data
+melted_data<-melted_data%>%
+  left_join(electoral_votes, by ="state")
 
-
+# For calculation
+# 
 subdata1 <- melted_data %>%
   mutate(StateFull = state.name[match(state, state.abb)]) %>%
   group_by(Type, Date) %>%
@@ -99,13 +114,13 @@ subdata1 <- melted_data %>%
 
 
 
-# Comments: sub1 data generates varialbe based on four types of avg gorup by Type and Date
+# Comments: sub1 data generates variable based on four types of avg group by Type and Date but does not take electoral votes into account
 sub1 <- subdata1 %>%
   select(Date, Type, Democratic) %>%  # Select relevant columns
   pivot_wider(names_from = Type, values_from = Democratic, names_prefix = "avg_")%>% 
   arrange(Date)
 
-# View the reshaped data
+# Comments: sub2 includes total observations for each type per day but does not take electoral votes into account
 sub2 <-subdata1 %>%
   select(Date, Type, No_Democratic) %>%  # Select relevant columns
   pivot_wider(names_from = Type, values_from = No_Democratic, names_prefix = "Count_")%>% 
@@ -113,7 +128,9 @@ sub2 <-subdata1 %>%
 
 
 
-#Creating the second subset with state-specific totals and proportions
+# Comment: subdata2 creates the probability of aggregated state winner by Date and Type 
+# Creating the second subset with state-specific totals and proportions
+# ******************Percent_byState variable used for state-level time series 
 subdata2 <- melted_data %>%
   group_by(Date, Type, state) %>%
   summarise(
@@ -128,7 +145,7 @@ subdata2 <- melted_data %>%
   mutate(Percent_byState_chr_Demo=sprintf("%1.2f%%", 100*Percent_byState_Demo))
 
 
-# Creating the second subset with state-specific totals and proportions
+# Creating the second subset with state-specific totals,showing total trial for specific day with value 1 or 2
 subdata3 <- melted_data %>%
   mutate(StateFull = state.name[match(state, state.abb)]) %>%
   group_by(Date, StateFull, Type, state, value) %>%
@@ -136,13 +153,10 @@ subdata3 <- melted_data %>%
     TotalTrial_byStatebyParty = n()
   )
 
-# ------------FIP merge
-# Load necessary library
-
 
 # Create the dataframe
 
-#Final dataset
+# ***********Final dataset for state map and state level time series trend
 
 extended_data <- melted_data %>%
   left_join(subdata1, by = c("Type", "Date")) %>%
@@ -155,7 +169,9 @@ extended_data <- melted_data %>%
   mutate(Predicted_party=ifelse(Percent_byState>=0.5, "Republican", "Democratic")) 
 
 
-#method #1 calculate the average and assign the votes
+# *********** For national level graph
+
+# method #1 calculate the average winning probability in each state and assign the electoral votes
 subdata2_1 <-subdata2%>%
   left_join(electoral_votes, by="state")%>%
   select(Date,Type,state,Percent_byState_Demo,Electoral_Votes)%>%
@@ -170,21 +186,129 @@ subdata2_2 <-subdata2_1%>%
   )
 
 
-subdata2_reshape <-subdata2_2 %>%
+# number should be 535 for now
+trials<-subdata2_1 %>%
+  group_by(Date,Type)%>%
+  summarize(
+    Votes = sum(Electoral_Votes)
+  )
+
+votes_trials_percent<-subdata2_2 %>%
+  left_join(trials,by=c("Type","Date")) %>%
+  mutate(votes_percent=Total_votes/Votes) %>%
+  select(Date, Type,proj_party, votes_percent) %>%  
+  pivot_wider(names_from = Type, values_from = votes_percent, names_prefix = "Votes_percent_") 
+
+votes_trials<-subdata2_2 %>%
   select(Date, Type,proj_party, Total_votes) %>%  # Select relevant columns
   pivot_wider(names_from = Type, values_from = Total_votes, names_prefix = "Votes_")%>% 
+  arrange(Date) 
+
+subdata2_reshape <-votes_trials%>%
+  left_join(votes_trials_percent, by=c("Date","proj_party")) %>% 
+  filter(proj_party=="Democratic")%>%
   arrange(Date) %>%
   filter(proj_party=="Democratic")
+  .groups = 'drop'
+
+#*******************************************************************
+subdata2_reshape <- subdata2_reshape %>%
+  ungroup() 
+#*******************************************************************
+
+##method #2 assign the votes first and then calculate the average
+
+subdata3_1<-melted_data %>%
+  group_by(Type, Trial, Date,party) %>%
+  summarise(
+    Number_Repub_Win = n(),
+    votes_party =sum(Electoral_Votes),
+    .groups = 'drop'
+  ) 
+
+
+subdata3_1_2<-melted_data %>%
+  group_by(Type, Date, party) %>%
+  summarise(
+    Number_Repub_Win = n(),
+    votes_party =sum(Electoral_Votes),
+    .groups = 'drop'
+  ) %>%
+  arrange(Date)
+
+#calculate total number of votes
+subdata3_2_2<-melted_data %>%
+  group_by(Type, Date) %>%
+  summarise(
+    Votes =sum(Electoral_Votes),
+    .groups = 'drop'
+  ) 
+
+
+subdata3_2_reshape<-subdata3_1_2%>%
+  left_join(subdata3_2_2,by=c("Type","Date")) %>%
+  mutate(Votes_perent=votes_party/Votes) %>%
+  select(Date, Type,party, Votes_perent) %>%  # Select relevant columns
+  pivot_wider(names_from = Type, values_from = Votes_perent, names_prefix = "Votes_")%>% 
+  filter(party=="Democratic")%>%
+  arrange(Date) 
 .groups = 'drop'
 
-subdata2_reshape <- subdata2_reshape %>%
-  ungroup() %>%  # Ungroup the data to remove any implicit grouping
-  select(Date, Votes_BBC, Votes_Direct, Votes_Fox, Votes_MSNBC)  
+
+# calculate total trials for each type each date for both parties, should be 100 per day for each type but we lose trials
+trial_counts<-subdata3_1 %>%
+  group_by(Type,Date) %>%
+  mutate(trial_counts= n_distinct(Trial))%>%
+  select(Type,Date,party,trial_counts)%>%
+  distinct() # drop duplicates 
+.groups = 'drop'
+
+trial_votes<-melted_data %>%
+  group_by(Type, Date,party) %>%
+  summarise(
+    votes_party =sum(Electoral_Votes),
+    .groups = 'drop'
+  ) %>%
+  left_join(trial_counts, by=c("party","Type","Date" ))%>%
+  mutate(average_votes=votes_party/trial_counts)
 
 
-#------------Data process done
+#total should be 535 for now and 538 later
+total_votes_count <- trial_votes %>%
+  select(Date, Type, average_votes) %>%  
+  group_by(Type, Date)%>%
+  summarise(
+    votes_total=sum(average_votes)
+  )
+ 
+# merge two datasets before reshape
+trial_votes <-trial_votes%>%
+  left_join(total_votes_count, by=c("Type","Date" )) %>%
+  mutate(average_votes = round(average_votes, digits = 0)) %>%  # Round average_votes
+  mutate(average_votes_percent=average_votes/votes_total)
+
+#*************** Dataset with predicted votes 
+average_votes_reshape <- trial_votes %>%
+  select(Date, Type, party, average_votes) %>%  # Select relevant columns
+  pivot_wider(names_from = Type, values_from = average_votes, names_prefix = "Votes_")
 
 
+
+average_votes_percent_reshape<- trial_votes %>%
+  select(Date, Type, party, average_votes_percent) %>%  # Select relevant columns
+  pivot_wider(names_from = Type, values_from = average_votes_percent, names_prefix = "Votes_Percent_")
+
+# Final Dataset for national level winner for average votes and average votes percent
+#*******************************************************************
+trial_votes_reshape <-average_votes_reshape%>%
+  left_join(average_votes_percent_reshape, by=c("Date","party"))%>% 
+  filter(party=="Democratic")%>%
+  arrange(Date) 
+#*******************************************************************
+
+  
+
+#------------Data  process done
 
 #write_csv(extended_data,"/Users/sunmingrun/Desktop/AI Project/panel_election_results_help.csv")
 
@@ -428,6 +552,10 @@ ui <- dashboardPage(
           column(
             width = 12,
             uiOutput("box_pat7")
+        ),
+        column(
+          width = 12,
+          uiOutput("box_pat8")
         )
       ),
       
@@ -721,7 +849,7 @@ server <- function(input, output, session) {
     
   })
   
-  # UI 7- Time Series 1
+  # UI 7- Time Series 1 Calculate the average and assign the votes
   Votes_data_4Voice <- reactive({
     #req(input$TimeseriesVoices) 
     req(input$date2)
@@ -729,13 +857,17 @@ server <- function(input, output, session) {
   })
   
   
+  # UI 8- Time Series 1 Assign the votes and calculate the average
+  
+  Votes_data_4Voice_2 <- reactive({
+    #req(input$TimeseriesVoices) 
+    req(input$date2)
+    filter(trial_votes_reshape,Date >= input$date2[1] & Date <= input$date2[2])
+  })
   
   
   
 
-  
-  
-  
   # Render UI -Map 1
   
   output$box_pat <- renderUI({
@@ -993,6 +1125,45 @@ server <- function(input, output, session) {
     )
   })
   
+  # Time Trend - 4 ------------------------------------------------------------------
+  output$box_pat8 <- renderUI({
+    div(
+      style = "position: relative; backgroundColor: #ecf0f5",
+      tabBox(
+        id = "box_pat",
+        width = NULL,
+        height = 320,
+        tabPanel(
+          title = "State Projected Democrat Electoral College Victory Likelihood",
+          div(
+            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
+            dropdown(
+              radioGroupButtons(
+                inputId = "box_pat7",
+                label = NULL, 
+                choices = c("Show all", "Show top 10 only"), 
+                selected = "Show all", 
+                direction = "vertical"
+              ),
+              size = "xs",
+              icon = icon("gear", class = "opt"), 
+              up = TRUE
+            )
+          )
+        ),
+        withSpinner(
+          plotlyOutput("distPlot2", height = 230),
+          type = 4,
+          color = "#d33724", 
+          size = 0.7 
+        )
+      )
+    )
+  })
+  
+  
+  
+  #         Output
   #-------Map 1 Anonymous
   output$box_map_anonymous <- renderPlotly ({
     
@@ -1292,6 +1463,75 @@ server <- function(input, output, session) {
       )
     ))
 })
+  
+  output$distPlot2 <- renderPlotly({
+    input$date2
+    fig <- plot_ly(Votes_data_4Voice_2(), x = ~Date, y = ~Votes_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
+                   line = list(color = 'rgb(205, 12, 24)', width = 4)) 
+    fig <- fig %>% add_trace(y = ~Votes_BBC, name = 'Proj BBC', line = list(color = 'rgb(22, 96, 167)', width = 4)) 
+    fig <- fig %>% add_trace(y = ~Votes_Fox, name = 'Proj Fox', line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'dash')) 
+    fig <- fig %>% add_trace(y = ~Votes_MSNBC, name = 'Proj MSNBC', line = list(color = 'rgb(22, 96, 167)', width = 4, dash = 'dot')) %>%
+      layout(
+        title = NULL,
+        xaxis = list(title = "Date",
+                     showgrid = TRUE),
+        yaxis = list(title = "Proj Democrat Win Percent", 
+                     range = c(140, 400),
+                     showgrid = FALSE),
+        shapes = list(
+          list(
+            type = "rect",
+            fillcolor = "rgba(205, 12, 24, 0.2)", # Light red fill for 140-270
+            line = list(color = "rgba(205, 12, 24, 0)"), # No border
+            x0 = min(Votes_data_4Voice_2()$Date), x1 = max(Votes_data_4Voice_2()$Date),
+            y0 = 140, y1 = 270
+          ),
+          list(
+            type = "rect",
+            fillcolor = "rgba(22, 96, 167, 0.2)", # Light blue fill for 270-400
+            line = list(color = "rgba(22, 96, 167, 0)"), # No border
+            x0 = min(Votes_data_4Voice_2()$Date), x1 = max(Votes_data_4Voice_2()$Date),
+            y0 = 270, y1 = 400
+          ),
+          list(
+            type = "line",
+            x0 = min(Votes_data_4Voice_2()$Date), x1 = max(Votes_data_4Voice_2()$Date),
+            y0 = 270, y1 = 270,
+            line = list(color = "rgb(0, 0, 0)", dash = 'dash', width = 2)
+          ),
+          list(
+            type = "line",
+            x0 = as.Date("2024-08-19"), x1 = as.Date("2024-08-19"),  # Vertical line for DNC
+            y0 = 140, y1 = 400,
+            line = list(color = "rgb(0, 0, 0)", width = 2)
+          )
+        )
+      ) %>%
+      layout(annotations = list(
+        list(
+          x = min(Votes_data_4Voice_2()$Date) + 5,
+          y = 350,
+          text = "Democrat Win",
+          showarrow = FALSE,
+          font = list(size = 12, weight = "bold", color = "rgb(22, 96, 167)"),
+          showgrid = FALSE
+        ),
+        list(
+          x = min(Votes_data_4Voice_2()$Date) + 5,
+          y = 200,
+          text = "Republican Win",
+          showarrow = FALSE,
+          font = list(size = 12, weight = "bold", color =  "rgb(205, 12, 24)")
+        ),
+        list(
+          x = as.Date("2024-08-20"),  # Position DNC label to the right of the vertical line
+          y = 160,                    # Position within the light red area
+          text = "DNC",
+          showarrow = FALSE,
+          font = list(size = 12, weight = "bold", color = "rgb(0, 0, 0)")
+        )
+      ))
+  })
   
 }
 
