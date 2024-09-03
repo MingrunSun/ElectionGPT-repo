@@ -288,12 +288,31 @@ trial_votes <-trial_votes%>%
   mutate(average_votes_percent=average_votes/votes_total)
 
 #*************** Dataset with predicted votes 
+#* For table
+average_votes<- trial_votes %>%
+select(Date, Type, party, average_votes)%>%
+  rename(
+    Voice = Type,  # Renaming 'Result' to 'value'
+    Party= party,
+    AverageVotes=average_votes)
+
+#For graph
 average_votes_reshape <- trial_votes %>%
   select(Date, Type, party, average_votes) %>%  # Select relevant columns
   pivot_wider(names_from = Type, values_from = average_votes, names_prefix = "Votes_")
 
 
+# For table
+average_votes_percent<- trial_votes %>%
+  select(Date, Type, party, average_votes_percent) %>%
+  mutate(average_votes_percent = round(average_votes_percent, digits = 2))%>%
+  rename(
+    Voice = Type,  # Renaming 'Result' to 'value'
+    Party= party,
+    WinLikelihood=average_votes_percent)
 
+
+# For graph
 average_votes_percent_reshape<- trial_votes %>%
   select(Date, Type, party, average_votes_percent) %>%  # Select relevant columns
   pivot_wider(names_from = Type, values_from = average_votes_percent, names_prefix = "Votes_Percent_")
@@ -398,9 +417,9 @@ ui <- dashboardPage(
         checkboxGroupButtons(
           inputId = "allInput",
           label = "CHOOSE GROUPS OF STATES",
-          choices = "ALL / NONE",
+          choices = "ALL / CLEAR",
           size = "sm",
-          selected = "ALL / NONE"
+          selected = "ALL / CLEAR"
         ),
         checkboxGroupInput(
           inputId = "statesInput",
@@ -496,11 +515,11 @@ ui <- dashboardPage(
       column(
         width = 12,
         bsButton("map", 
-                 label = "MAPS", 
+                 label = "STATE LEVEL OUTCOME", 
                  icon = icon("map-marker"), 
                  style = "success"),
         bsButton("trend", 
-                 label = "TREND", 
+                 label = "NATIONAL LEVEL OUTCOME", 
                  icon = icon("chart-bar"), 
                  style = "success"),
         bsButton("about", 
@@ -519,6 +538,10 @@ ui <- dashboardPage(
     fluidRow(
       div(
         id = "map_panel", 
+        column(
+          width = 12,
+          uiOutput("box_pat6")
+        ),
         column(
           width = 6,
           uiOutput("box_pat")
@@ -542,20 +565,20 @@ ui <- dashboardPage(
         div(
           id = "trend_panel", 
           column(
-            width = 12,
-            uiOutput("box_pat5")
-          ),
-          column(
-            width = 12,
-            uiOutput("box_pat6")
-          ),
-          column(
-            width = 12,
+            width = 6,
             uiOutput("box_pat7")
         ),
         column(
-          width = 12,
+          width = 6,
           uiOutput("box_pat8")
+        ),
+        column(
+          width = 6,
+          uiOutput("box_table1")
+        ),
+        column(
+          width = 6,
+          uiOutput("box_table2")
         )
       ),
       
@@ -652,14 +675,14 @@ server <- function(input, output, session) {
     hide("tab")
   })
   
-  # update all/none group in sidebar and antimicrobials by group
+  # update all/none group in sidebar
   observe({
     x <- input$allInput
     if (!is.null(x)) {
-      x <- state_group$StateFull
+      x <- c("North Carolina","Georgia") #character(0) 
     }
     else {
-      x <- character(0) 
+      x <- state_group$StateFull
     }
     
     updateCheckboxGroupInput(
@@ -826,12 +849,12 @@ server <- function(input, output, session) {
   
   
   
-  # UI 5- Time Series 1
+  # UI 5- Time Series 1 ---DISCARD
   
   Count_data_4Voice <- reactive({
     #req(input$TimeseriesVoices) 
     req(input$date2)
-    filter(sub1,Date >= input$date2[1] & Date <= input$date2[2])
+    filter(trial_votes_reshape,Date >= input$date2[1] & Date <= input$date2[2])
   })
   
   
@@ -849,7 +872,7 @@ server <- function(input, output, session) {
     
   })
   
-  # UI 7- Time Series 1 Calculate the average and assign the votes
+  # UI 7- Time Series 1 Calculate the average and assign the votes --DISCARD
   Votes_data_4Voice <- reactive({
     #req(input$TimeseriesVoices) 
     req(input$date2)
@@ -857,7 +880,7 @@ server <- function(input, output, session) {
   })
   
   
-  # UI 8- Time Series 1 Assign the votes and calculate the average
+  # UI 8- Time Series 1 Assign the votes and calculate the average---DISCARD
   
   Votes_data_4Voice_2 <- reactive({
     #req(input$TimeseriesVoices) 
@@ -866,6 +889,49 @@ server <- function(input, output, session) {
   })
   
   
+  # UI 9 & 10 both average votes and average votes percent use this function
+  Votes_final <-reactive({
+    req(input$date2)
+    filter(trial_votes_reshape,Date >= input$date2[1] & Date <= input$date2[2])
+  })
+  
+
+  # UI Table 1 average votes 
+  Table1_votes <-reactive({
+    #filter(average_votes,Type %in%  input$box_table1)
+    
+    datatable(
+      average_votes, 
+      rownames = FALSE, 
+      extensions = "Buttons",
+      options = list(
+        dom = 'Bfrtp',
+        buttons = c('csv', 'excel', 'pdf'),
+        style = "bootstrap",
+        lengthMenu = c(seq(10, 150, 10))
+      )
+    )
+
+  })
+  
+  # UI Table 2 average votes perentage
+  Table2_votes_percent <-reactive({
+    #filter(average_votes,Type %in%  input$box_table1)
+    
+    datatable(
+      average_votes_percent, 
+      rownames = FALSE, 
+      extensions = "Buttons",
+      options = list(
+        dom = 'Bfrtp',
+        buttons = c('csv', 'excel', 'pdf'),
+        style = "bootstrap",
+        lengthMenu = c(seq(10, 150, 10))
+      )
+    )
+    
+  })
+ 
   
 
   # Render UI -Map 1
@@ -1098,7 +1164,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "State Projected Democrat Electoral College Victory Likelihood",
+          title = "Projected Democrat Electoral College Votes",
           div(
             style = "position: absolute; left: 0.5em; bottom: 0.5em;",
             dropdown(
@@ -1134,12 +1200,12 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "State Projected Democrat Electoral College Victory Likelihood",
+          title = " Projected Democrat Electoral College Victory Likelihood",
           div(
             style = "position: absolute; left: 0.5em; bottom: 0.5em;",
             dropdown(
               radioGroupButtons(
-                inputId = "box_pat7",
+                inputId = "box_pat8",
                 label = NULL, 
                 choices = c("Show all", "Show top 10 only"), 
                 selected = "Show all", 
@@ -1159,8 +1225,50 @@ server <- function(input, output, session) {
         )
       )
     )
+})
+  # UI Table 1 votes
+  output$box_table1 <- renderUI({
+    div(
+      style = "position: relative",
+      tabBox(
+        id = "box_table1",
+        width = NULL,
+        height = 550,
+        tabPanel(
+          title = "Projected Votes"
+          ),
+          withSpinner(
+            DT::dataTableOutput("table1_votes", height = 400),
+            type = 4,
+            color = "#d33724",
+            size = 0.7
+          )
+        )
+      )
+  
   })
   
+  # UI Table 2 percentage
+  output$box_table2 <- renderUI({
+    div(
+      style = "position: relative",
+      tabBox(
+        id = "box_table2",
+        width = NULL,
+        height = 550,
+        tabPanel(
+          title = "Projected Win Likelihood"
+        ),
+        withSpinner(
+          DT::dataTableOutput("table2_votes_percent", height = 400),
+          type = 4,
+          color = "#d33724",
+          size = 0.7
+        )
+      )
+    )
+    
+  })
   
   
   #         Output
@@ -1303,7 +1411,7 @@ server <- function(input, output, session) {
   })  
   
   
-  # UI #5 Overall need to be revised with add DNC 
+  # UI #5 Overall need to be revised with add DNC ---Discard
   output$plot_Overall<- renderPlotly({
     input$date2
     
@@ -1345,7 +1453,7 @@ server <- function(input, output, session) {
       ))
   })
   
-  # UI #6 Time series by state cannot get graph working
+  # UI #6 Time series by state 
   output$plot_state <- renderPlotly({
     input$allInput
     input$voicechoice
@@ -1397,7 +1505,7 @@ server <- function(input, output, session) {
   
   output$distPlot <- renderPlotly({
     input$date2
-  fig <- plot_ly(Votes_data_4Voice(), x = ~Date, y = ~Votes_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
+  fig <- plot_ly(Votes_final(), x = ~Date, y = ~Votes_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
                  line = list(color = 'rgb(205, 12, 24)', width = 4)) 
   fig <- fig %>% add_trace(y = ~Votes_BBC, name = 'Proj BBC', line = list(color = 'rgb(22, 96, 167)', width = 4)) 
   fig <- fig %>% add_trace(y = ~Votes_Fox, name = 'Proj Fox', line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'dash')) 
@@ -1406,7 +1514,7 @@ server <- function(input, output, session) {
       title = NULL,
       xaxis = list(title = "Date",
                    showgrid = TRUE),
-      yaxis = list(title = "Proj Democrat Win Percent", 
+      yaxis = list(title = "Proj Democrat Win Votes", 
                    range = c(140, 400),
                    showgrid = FALSE),
       shapes = list(
@@ -1414,19 +1522,19 @@ server <- function(input, output, session) {
           type = "rect",
           fillcolor = "rgba(205, 12, 24, 0.2)", # Light red fill for 140-270
           line = list(color = "rgba(205, 12, 24, 0)"), # No border
-          x0 = min(Votes_data_4Voice()$Date), x1 = max(Votes_data_4Voice()$Date),
+          x0 = min(Votes_final()$Date), x1 = max(Votes_final()$Date),
           y0 = 140, y1 = 270
         ),
         list(
           type = "rect",
           fillcolor = "rgba(22, 96, 167, 0.2)", # Light blue fill for 270-400
           line = list(color = "rgba(22, 96, 167, 0)"), # No border
-          x0 = min(Votes_data_4Voice()$Date), x1 = max(Votes_data_4Voice()$Date),
+          x0 = min(Votes_final()$Date), x1 = max(Votes_final()$Date),
           y0 = 270, y1 = 400
         ),
         list(
           type = "line",
-          x0 = min(Votes_data_4Voice()$Date), x1 = max(Votes_data_4Voice()$Date),
+          x0 = min(Votes_final()$Date), x1 = max(Votes_final()$Date),
           y0 = 270, y1 = 270,
           line = list(color = "rgb(0, 0, 0)", dash = 'dash', width = 2)
         ),
@@ -1440,7 +1548,7 @@ server <- function(input, output, session) {
     ) %>%
     layout(annotations = list(
       list(
-        x = min(Votes_data_4Voice()$Date) + 5,
+        x = min(Votes_final()$Date) + 5,
         y = 350,
         text = "Democrat Win",
         showarrow = FALSE,
@@ -1448,7 +1556,7 @@ server <- function(input, output, session) {
         showgrid = FALSE
       ),
       list(
-        x = min(Votes_data_4Voice()$Date) + 5,
+        x = min(Votes_final()$Date) + 5,
         y = 200,
         text = "Republican Win",
         showarrow = FALSE,
@@ -1466,66 +1574,66 @@ server <- function(input, output, session) {
   
   output$distPlot2 <- renderPlotly({
     input$date2
-    fig <- plot_ly(Votes_data_4Voice_2(), x = ~Date, y = ~Votes_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
+    fig <- plot_ly(Votes_final(), x = ~Date, y = ~Votes_Percent_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
                    line = list(color = 'rgb(205, 12, 24)', width = 4)) 
-    fig <- fig %>% add_trace(y = ~Votes_BBC, name = 'Proj BBC', line = list(color = 'rgb(22, 96, 167)', width = 4)) 
-    fig <- fig %>% add_trace(y = ~Votes_Fox, name = 'Proj Fox', line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'dash')) 
-    fig <- fig %>% add_trace(y = ~Votes_MSNBC, name = 'Proj MSNBC', line = list(color = 'rgb(22, 96, 167)', width = 4, dash = 'dot')) %>%
+    fig <- fig %>% add_trace(y = ~Votes_Percent_BBC, name = 'Proj BBC', line = list(color = 'rgb(22, 96, 167)', width = 4)) 
+    fig <- fig %>% add_trace(y = ~Votes_Percent_Fox, name = 'Proj Fox', line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'dash')) 
+    fig <- fig %>% add_trace(y = ~Votes_Percent_MSNBC, name = 'Proj MSNBC', line = list(color = 'rgb(22, 96, 167)', width = 4, dash = 'dot')) %>%
       layout(
         title = NULL,
         xaxis = list(title = "Date",
                      showgrid = TRUE),
         yaxis = list(title = "Proj Democrat Win Percent", 
-                     range = c(140, 400),
+                     range = c(0.3, 0.7),
                      showgrid = FALSE),
         shapes = list(
           list(
             type = "rect",
             fillcolor = "rgba(205, 12, 24, 0.2)", # Light red fill for 140-270
             line = list(color = "rgba(205, 12, 24, 0)"), # No border
-            x0 = min(Votes_data_4Voice_2()$Date), x1 = max(Votes_data_4Voice_2()$Date),
-            y0 = 140, y1 = 270
+            x0 = min(Votes_final()$Date), x1 = max(Votes_final()$Date),
+            y0 =0.3, y1 = 0.5
           ),
           list(
             type = "rect",
             fillcolor = "rgba(22, 96, 167, 0.2)", # Light blue fill for 270-400
             line = list(color = "rgba(22, 96, 167, 0)"), # No border
-            x0 = min(Votes_data_4Voice_2()$Date), x1 = max(Votes_data_4Voice_2()$Date),
-            y0 = 270, y1 = 400
+            x0 = min(Votes_final()$Date), x1 = max(Votes_final()$Date),
+            y0 = 0.5, y1 = 0.7
           ),
           list(
             type = "line",
-            x0 = min(Votes_data_4Voice_2()$Date), x1 = max(Votes_data_4Voice_2()$Date),
-            y0 = 270, y1 = 270,
+            x0 = min(Votes_final()$Date), x1 = max(Votes_final()$Date),
+            y0 = 0.5, y1 = 0.5,
             line = list(color = "rgb(0, 0, 0)", dash = 'dash', width = 2)
           ),
           list(
             type = "line",
             x0 = as.Date("2024-08-19"), x1 = as.Date("2024-08-19"),  # Vertical line for DNC
-            y0 = 140, y1 = 400,
+            y0 = 0.3, y1 = 0.7,
             line = list(color = "rgb(0, 0, 0)", width = 2)
           )
         )
       ) %>%
       layout(annotations = list(
         list(
-          x = min(Votes_data_4Voice_2()$Date) + 5,
-          y = 350,
+          x = min(Votes_final()$Date) + 5,
+          y = 0.65,
           text = "Democrat Win",
           showarrow = FALSE,
           font = list(size = 12, weight = "bold", color = "rgb(22, 96, 167)"),
           showgrid = FALSE
         ),
         list(
-          x = min(Votes_data_4Voice_2()$Date) + 5,
-          y = 200,
+          x = min(Votes_final()$Date) + 5,
+          y = 0.4,
           text = "Republican Win",
           showarrow = FALSE,
           font = list(size = 12, weight = "bold", color =  "rgb(205, 12, 24)")
         ),
         list(
           x = as.Date("2024-08-20"),  # Position DNC label to the right of the vertical line
-          y = 160,                    # Position within the light red area
+          y = 0.3,                    # Position within the light red area
           text = "DNC",
           showarrow = FALSE,
           font = list(size = 12, weight = "bold", color = "rgb(0, 0, 0)")
@@ -1533,10 +1641,22 @@ server <- function(input, output, session) {
       ))
   })
   
+  
+  # Table 1
+  output$table1_votes <- DT::renderDataTable({
+    input$box_table1
+    Table1_votes()
+  }, server = FALSE)
+  
+  # Table 2
+  output$table2_votes_percent <- DT::renderDataTable({
+
+    Table2_votes_percent()
+  }, server = FALSE)
+  
+  
+  
 }
-
-
-
 
 
 
