@@ -473,28 +473,7 @@ ui <- dashboardPage(
           choices = party_group$party,
           selected = "Republican"
         )
-      ),
-      br(),
-      br(),
-      menuItem(
-        "DOWNLOAD SELECTION",
-        tabName = "download",
-        icon = icon("download"),
-        textInput(
-          inputId = "filename",
-          placeholder = "Name download file",
-          label = ""
-        ),
-        div(
-          downloadButton(
-            outputId = "downloadData",
-            label = "Save Election Prediction Data",
-            icon = icon("download"),
-            style = "color: black; margin-left: 15px; margin-bottom: 5px;"
-          )
-        )
-      ),
-      br()
+      )
     )
   ),
   
@@ -524,7 +503,7 @@ ui <- dashboardPage(
                  style = "success"),
         bsButton("about", 
                  label = "ABOUT", 
-                 icon = icon("flask", class = "flask-box"), 
+                 icon = icon("gears"), 
                  style = "success")
       )
     ),
@@ -659,7 +638,7 @@ server <- function(input, output, session) {
     updateButton(
       session, 
       inputId = "confirm", 
-      label = "CONFIRM SELECTION", 
+      label = "ENJOY EXPLORE", 
       icon = icon("bar-chart"), 
       style = "primary")
   })
@@ -1138,7 +1117,7 @@ server <- function(input, output, session) {
   #-------Map 1 Anonymous
   output$box_map_anonymous <- renderPlotly ({
     
-    input$confirm
+    #input$confirm
     input$date
     
     l <- list(color = toRGB("white"), width = 1)
@@ -1174,6 +1153,7 @@ server <- function(input, output, session) {
   # Render the Plotly map #1
   output$box_map_BBC <- renderPlotly ({
     input$date
+    #input$confirm
     
     l <- list(color = toRGB("white"), width = 1)
     
@@ -1210,7 +1190,7 @@ server <- function(input, output, session) {
   # Render the Plotly map #1
   output$box_map_Fox <- renderPlotly ({
     input$date
-    
+   
     l <- list(color = toRGB("white"), width = 1)
     
     g <- list(
@@ -1243,7 +1223,7 @@ server <- function(input, output, session) {
   # Render the Plotly map #1
   output$box_map_MSNBC <- renderPlotly ({
     input$date
-    
+
     l <- list(color = toRGB("white"), width = 1)
     
     g <- list(
@@ -1277,6 +1257,7 @@ server <- function(input, output, session) {
   # UI #5 Overall need to be revised with add DNC ---Discard
   output$plot_Overall<- renderPlotly({
     input$date2
+    #input$confirm
     
     fig <- plot_ly(Count_data_4Voice(), x = ~Count_data_4Voice()$Date, y = ~avg_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
                    line = list(color = 'rgb(205, 12, 24)', width = 4)) 
@@ -1322,6 +1303,7 @@ server <- function(input, output, session) {
     input$voicechoice
     input$statesInput
     input$date2
+    #input$confirm
     #input$partychoice
     
     isolate({
@@ -1368,6 +1350,8 @@ server <- function(input, output, session) {
   
   output$distPlot <- renderPlotly({
     input$date2
+    #input$confirm
+    
   fig <- plot_ly(Votes_final(), x = ~Date, y = ~Votes_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
                  line = list(color = 'rgb(205, 12, 24)', width = 4)) 
   fig <- fig %>% add_trace(y = ~Votes_BBC, name = 'Proj BBC', line = list(color = 'rgb(22, 96, 167)', width = 4)) 
@@ -1437,6 +1421,8 @@ server <- function(input, output, session) {
   
   output$distPlot2 <- renderPlotly({
     input$date2
+    #input$confirm
+    
     fig <- plot_ly(Votes_final(), x = ~Date, y = ~Votes_Percent_Direct, name = 'Proj Anonymous', type = 'scatter', mode = 'lines',
                    line = list(color = 'rgb(205, 12, 24)', width = 4)) 
     fig <- fig %>% add_trace(y = ~Votes_Percent_BBC, name = 'Proj BBC', line = list(color = 'rgb(22, 96, 167)', width = 4)) 
