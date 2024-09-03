@@ -525,10 +525,6 @@ ui <- dashboardPage(
         bsButton("about", 
                  label = "ABOUT", 
                  icon = icon("flask", class = "flask-box"), 
-                 style = "success"),
-        bsButton("outcome", 
-                 label = "OUTCOME", 
-                 icon = icon("download"), 
                  style = "success")
       )
     ),
@@ -638,7 +634,7 @@ server <- function(input, output, session) {
   
   update_all <- function(x) {
     updateSelectInput(session, "tab",
-                      choices = c("", "Maps", "Trends", "About", "Outcome"),
+                      choices = c("", "Maps", "Trends", "About"),
                       label = "",
                       selected = x
     )
@@ -655,9 +651,7 @@ server <- function(input, output, session) {
   observeEvent(input$diagnostics, {
     update_all("About")
   })
-  observeEvent(input$outcome, {
-    update_all("Outcome")
-  })
+ 
   
   # update confirm button
   
@@ -701,7 +695,7 @@ server <- function(input, output, session) {
     show("map_panel")
     hide("trend_panel")
     hide("about_panel")
-    hide("outcome_panel")
+    #hide("outcome_panel")
   }, once = TRUE)
   
   
@@ -709,27 +703,22 @@ server <- function(input, output, session) {
     show("map_panel")
     hide("trend_panel")
     hide("about_panel")
-    hide("outcome_panel")
+    #hide("outcome_panel")
   })
   observeEvent(input$trend, {
     show("trend_panel")
     hide("about_panel")
-    hide("outcome_panel")
+    #hide("outcome_panel")
     hide("map_panel")
   })
   observeEvent(input$about, {
     show("about_panel")
     hide("trend_panel")
-    hide("outcome_panel")
-    hide("map_panel")
-  })
-  observeEvent(input$outcome, {
-    show("outcome_panel")
-    hide("about_panel")
-    hide("trend_panel")
+    #hide("outcome_panel")
     hide("map_panel")
   })
   
+
   
   # show active button with color
   
@@ -756,13 +745,7 @@ server <- function(input, output, session) {
         paste("success")
       }
     })
-    updateButton(session, "outcome", style = {
-      if (x == "Outcome") {
-        paste("warning")
-      } else {
-        paste("success")
-      }
-    })
+
   })
   
   
@@ -908,7 +891,7 @@ server <- function(input, output, session) {
         dom = 'Bfrtp',
         buttons = c('csv', 'excel', 'pdf'),
         style = "bootstrap",
-        lengthMenu = c(seq(10, 150, 10))
+        lengthMenu = c(seq(5, 150, 5))
       )
     )
 
@@ -926,7 +909,7 @@ server <- function(input, output, session) {
         dom = 'Bfrtp',
         buttons = c('csv', 'excel', 'pdf'),
         style = "bootstrap",
-        lengthMenu = c(seq(10, 150, 10))
+        lengthMenu = c(seq(5, 150, 5))
       )
     )
     
@@ -944,22 +927,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "United States Map Projected Anonymous",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat1",
-                label = NULL, 
-                choices = c("Show all", "Show top 10 only"), 
-                selected = "Show all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          )
+          title = "United States Map Projected Anonymous"
         ),
         withSpinner(
           plotlyOutput("box_map_anonymous", height = 230),
@@ -982,22 +950,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "United States Map Projected BBC",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat2",
-                label = NULL, 
-                choices = c("Show all", "Show top 10 only"), 
-                selected = "Show all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          )
+          title = "United States Map Projected BBC"
         ),
         withSpinner(
           plotlyOutput("box_map_BBC", height = 230),
@@ -1018,22 +971,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "United States Map Projected Fox",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat3",
-                label = NULL, 
-                choices = c("Show all", "Show top 10 only"), 
-                selected = "Show all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          )
+          title = "United States Map Projected Fox"
         ),
         withSpinner(
           plotlyOutput("box_map_Fox", height = 230),
@@ -1054,22 +992,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "United States Map Projected MSNBC",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat4",
-                label = NULL, 
-                choices = c("Show all", "Show top 10 only"), 
-                selected = "Show all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          )
+          title = "United States Map Projected MSNBC"
         ),
         withSpinner(
           plotlyOutput("box_map_MSNBC", height = 230),
@@ -1091,22 +1014,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "Projected Democrat Electoral College Victory Likelihood",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat5",
-                label = NULL, 
-                choices = c("Show all", "Show top 10 only"), 
-                selected = "Show all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          )
+          title = "Projected Democrat Electoral College Victory Likelihood"
         ),
         withSpinner(
           plotlyOutput("plot_Overall", height = 250),
@@ -1119,7 +1027,7 @@ server <- function(input, output, session) {
   })
   
   
-  # Time Trend - 2 ------------------------------------------------------------------
+  # Time Trend - 2 ------Discard------------------------------------------------------------
   output$box_pat6 <- renderUI({
     div(
       style = "position: relative; backgroundColor: #ecf0f5",
@@ -1128,22 +1036,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "State Projected Democrat Electoral College Victory Likelihood",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat6",
-                label = NULL, 
-                choices = c("Show all", "Show top 10 only"), 
-                selected = "Show all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          )
+          title = "State Projected Democrat Electoral College Victory Likelihood"
         ),
         withSpinner(
           plotlyOutput("plot_state", height = 230),
@@ -1164,22 +1057,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = "Projected Democrat Electoral College Votes",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat7",
-                label = NULL, 
-                choices = c("Show all", "Show top 10 only"), 
-                selected = "Show all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          )
+          title = "Projected Democrat Electoral College Votes"
         ),
         withSpinner(
           plotlyOutput("distPlot", height = 230),
@@ -1200,22 +1078,7 @@ server <- function(input, output, session) {
         width = NULL,
         height = 320,
         tabPanel(
-          title = " Projected Democrat Electoral College Victory Likelihood",
-          div(
-            style = "position: absolute; left: 0.5em; bottom: 0.5em;",
-            dropdown(
-              radioGroupButtons(
-                inputId = "box_pat8",
-                label = NULL, 
-                choices = c("Show all", "Show top 10 only"), 
-                selected = "Show all", 
-                direction = "vertical"
-              ),
-              size = "xs",
-              icon = icon("gear", class = "opt"), 
-              up = TRUE
-            )
-          )
+          title = " Projected Democrat Electoral College Victory Likelihood"
         ),
         withSpinner(
           plotlyOutput("distPlot2", height = 230),
@@ -1233,12 +1096,12 @@ server <- function(input, output, session) {
       tabBox(
         id = "box_table1",
         width = NULL,
-        height = 550,
+        height = 400,
         tabPanel(
           title = "Projected Votes"
           ),
           withSpinner(
-            DT::dataTableOutput("table1_votes", height = 400),
+            DT::dataTableOutput("table1_votes", height = 300),
             type = 4,
             color = "#d33724",
             size = 0.7
@@ -1255,12 +1118,12 @@ server <- function(input, output, session) {
       tabBox(
         id = "box_table2",
         width = NULL,
-        height = 550,
+        height = 400,
         tabPanel(
           title = "Projected Win Likelihood"
         ),
         withSpinner(
-          DT::dataTableOutput("table2_votes_percent", height = 400),
+          DT::dataTableOutput("table2_votes_percent", height = 300),
           type = 4,
           color = "#d33724",
           size = 0.7
@@ -1654,7 +1517,7 @@ server <- function(input, output, session) {
     Table2_votes_percent()
   }, server = FALSE)
   
-  
+
   
 }
 

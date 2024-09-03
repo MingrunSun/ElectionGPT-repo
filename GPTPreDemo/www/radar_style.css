@@ -3,11 +3,11 @@
     font-family: inherit;
     padding: 5px 12px;
     height: 55px;
-    min-width: 21.85%;
+    min-width: 30%;
     margin: 0px 10px 14px 20px;
-    text-align: left;
+    text-align: center;
     color: white;
-    background: #727477;
+    background: #455cc4;
     text-indent: 4px;
     vertical-align: middle;
     border-radius: 0px;
@@ -20,14 +20,14 @@
     transform: translate3d(0, 0, 0);
 }
 .btn-success:hover {
-    background-color:#d1351b;
+    background-color:#5dc484;
     font-size: 18px;
     font-family: inherit;
     padding: 5px 12px;
     height: 55px;
-    min-width: 21.85%;
+    min-width: 30%;
     margin: 0px 10px 14px 20px;
-    text-align: left;
+    text-align: center;
     color: white;
     text-indent: 4px;
     vertical-align: middle;
@@ -85,8 +85,8 @@ section.sidebar .shiny-bound-input.action-button, section.sidebar .shiny-bound-i
     display: block;
 }
 .btn-danger {
-    background-color: #d1351b;
-    border-color: #d1351b;
+    background-color: #3874c2;
+    border-color: #3874c2;
     height: 55px;
     width: 300px;
     border-radius: 0;
@@ -135,7 +135,7 @@ section.sidebar .shiny-bound-input.action-button, section.sidebar .shiny-bound-i
      box-shadow:5px 5px 5px lightgrey;
      border-bottom: 0px;
  }
-}
+
  .info-box-icon.bg-black {
      height:10px; 
 }
@@ -154,7 +154,7 @@ section.sidebar .shiny-bound-input.action-button, section.sidebar .shiny-bound-i
      background-color:#d1351b 
 }
  .skin-black .main-header .navbar .nav > li > a {
-     color:#fff 
+     color:#721616 
 }
  .skin-black .main-header .navbar .nav > li > a:hover {
      background:#ffffff;
