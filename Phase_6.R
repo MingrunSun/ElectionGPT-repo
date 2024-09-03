@@ -30,7 +30,7 @@ library(shinyWidgets)
 library(bslib)
 
 # Melt the dataframe to long format
-data<- read_excel("/Users/sunmingrun/Desktop/AI Project/panel_election_results.xlsx")
+data<- read_excel("panel_election_results.xlsx")
 
 #View(data)
 # Melt the dataframe to long format and convert the Date to date format
